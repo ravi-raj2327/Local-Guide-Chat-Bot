@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Guide AI Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;700&family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        /* --- Global Styles & Variables --- */
+        :root {
+            --primary-color: #1e1b4b;
+            --secondary-color: #d946ef;
+            --accent-color: #06b6d4;
+            --chat-bg: #ffffff;
+            --header-bg: linear-gradient(90deg, #1e1b4b, #4c1d95);
+            --shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+            --border-radius: 32px;
+            --text-color: #1e293b;
+            --bg-light: #f8fafc;
+            --bg-dark: #0f172a;
+            --chat-bg-dark: #1e293b;
+            --text-dark: #f1f5f9;
+            --glow: 0 0 20px rgba(6, 182, 212, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-light);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 60px;
+            position: relative;
+            overflow: hidden;
+            color: var(--text-color);
+            transition: background 0.7s, color 0.7s;
+        }
+
+        body.dark-mode {
+            background: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        /* --- Starfield Background --- */
+        .starfield-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        .starfield-bg canvas {
+            width: 100%;
+            height: 100%;
+            opacity: 0.8;
+        }
+
+        /* --- Chat Container --- */
+        .chatbot-container {
+            width: 100%;
+            max-width: 750px;
+            height: 94vh;
+            max-height: 950px;
+            background: var(--chat-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow), var(--glow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            transition: background 0.7s, transform 0.5s;
+            z-index: 10;
+        }
+
+        body.dark-mode .chatbot-container {
+            background: var(--chat-bg-dark);
+        }
+
+        .chatbot-container:hover {
+            transform: translateY(-12px);
+        }
+
+        /* --- Chat Header --- */
+        .chat-header {
+            background: var(--header-bg);
+            color: white;
+            padding: 28px 40px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .chat-header h2 {
+            font-size: 2.2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            text-shadow: 0 0 12px var(--accent-color);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 35px;
+        }
+
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            background: #22c55e;
+            border-radius: 50%;
+            box-shadow: var(--glow);
+            animation: pulse 2.5s infinite;
+        }
+
+        .header-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: transform 0.4s, color 0.4s;
+        }
+
+        .header-button:hover {
+            transform: scale(1.25);
+            color: var(--accent-color);
+        }
+
+        .location-info {
+            font-size: 1.2rem;
+            font-weight: 400;
+            opacity: 0;
+            margin-left: 20px;
+            font-family: 'Inter', sans-serif;
+            transition: opacity 1s ease;
+        }
+
+        .location-info.visible {
+            opacity: 0.9;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            position: absolute;
+            top: 0;
+            right: -500px;
+            width: 500px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: -8px 0 28px rgba(0, 0, 0, 0.25);
+            transition: right 0.6s ease;
+            z-index: 30;
+            padding: 50px;
+            backdrop-filter: blur(18px);
+        }
+
+        body.dark-mode .sidebar {
+            background: rgba(30, 41, 59, 0.98);
+        }
+
+        .sidebar.active {
+            right: 0;
+        }
+
+        .sidebar h3 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            color: var(--primary-color);
+        }
+
+        body.dark-mode .sidebar h3 {
+            color: var(--accent-color);
+        }
+
+        .sidebar label {
+            display: flex;
+            align-items: center;
+            margin: 30px 0;
+            font-size: 1.3rem;
+        }
+
+        .sidebar input[type="checkbox"] {
+            margin-right: 18px;
+            width: 28px;
+            height: 28px;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .sidebar input[type="checkbox"]:hover {
+            transform: scale(1.1);
+        }
+
+        .sidebar input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent-color);
+            cursor: pointer;
+        }
+
+        .sidebar button {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 16px;
+            cursor: pointer;
+            margin-top: 35px;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            transition: background 0.4s, transform 0.4s;
+            width: 100%;
+            box-shadow: var(--glow);
+        }
+
+        .sidebar button:hover {
+            background: var(--accent-color);
+            transform: translateY(-5px);
+        }
+
+        .sidebar button:active {
+            animation: saveGlow 0.7s;
+        }
+
+        /* --- Iframe Container --- */
+        .iframe-container {
+            flex-grow: 1;
+            overflow: hidden;
+            position: relative;
+            background: linear-gradient(145deg, #ffffff, #e5e7eb);
+            border-radius: 20px;
+            margin: 24px;
+            box-shadow: inset 0 0 12px rgba(0, 0, 0, 0.15), var(--glow);
+        }
+
+        body.dark-mode .iframe-container {
+            background: linear-gradient(145deg, #1e293b, #111827);
+        }
+
+        #chatbot-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 20px;
+            opacity: 0;
+            transition: opacity 1.2s ease, transform 0.6s ease;
+            transform: scale(0.95);
+        }
+
+        #chatbot-iframe.loaded {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .iframe-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 60%, rgba(6, 182, 212, 0.15) 100%);
+            z-index: 5;
+            box-shadow: inset 0 0 20px rgba(6, 182, 212, 0.3);
+        }
+
+        /* --- Loading Animation --- */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.96);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: ව‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍‍ cili, center;
+            z-index: 10;
+            transition: opacity 1.2s;
+            backdrop-filter: blur(12px);
+        }
+
+        body.dark-mode .loading-overlay {
+            background: rgba(15, 27, 42, 0.96);
+        }
+
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader {
+            width: 90px;
+            height: 90px;
+            border: 12px solid transparent;
+            border-top: 12px solid var(--accent-color);
+            border-right: 12px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1.5s linear infinite, glow 2.2s ease-in-out infinite;
+        }
+
+        .loading-text {
+            margin-top: 30px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-color);
+            text-shadow: 0 0 10px var(--accent-color);
+        }
+
+        body.dark-mode .loading-text {
+            color: var(--text-dark);
+        }
+
+        /* --- Holographic Toggle Button --- */
+        .chatbot-toggle {
+            position: fixed;
+            bottom: 80px;
+            right: 80px;
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: var(--header-bg);
+            color: white;
+            font-size: 2.8rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow), var(--glow);
+            border: none;
+            cursor: pointer;
+            z-index: 1000;
+            transition: transform 0.6s, background 0.6s;
+            animation: neonPulse 3.5s infinite;
+        }
+
+        .chatbot-toggle:hover {
+            transform: scale(1.3);
+            background: var(--accent-color);
+        }
+
+        /* --- Keyframes --- */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 22px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+
+        @keyframes glow {
+            0% { box-shadow: 0 0 20px var(--accent-color); }
+            50% { box-shadow: 0 0 40px var(--accent-color); }
+            100% { box-shadow: 0 0 20px var(--accent-color); }
+        }
+
+        @keyframes neonPulse {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.7); }
+            100% { filter: brightness(1); }
+        }
+
+        @keyframes starTwinkle {
+            0% { opacity: 0.4; }
+            50% { opacity: 0.8; }
+            100% { opacity: 0.4; }
+        }
+
+        @keyframes saveGlow {
+            0% { box-shadow: 0 0 0 var(--accent-color); }
+            50% { box-shadow: 0 0 30px var(--accent-color); }
+            100% { box-shadow: 0 0 0 var(--accent-color); }
+        }
+
+        /* --- Responsive Styles --- */
+        @media (max-width: 600px) {
+            body {
+                padding: 0;
+            }
+            
+            .chatbot-container {
+                position: fixed;
+                bottom: 0;
+                right: 0;
+                width: 100%;
+                height: 100vh;
+                transform: translateY(100%);
+                transition: transform 0.7s ease;
+                z-index: 999;
+                max-height: none;
+                border-radius: 0;
+            }
+            
+            .chatbot-container.active {
+                transform: translateY(0);
+            }
+            
+            .chatbot-toggle {
+                display: flex;
+            }
+
+            .sidebar {
+                width: 100%;
+                right: -100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Starfield Background -->
+    <div class="starfield-bg">
+        <canvas id="starfieldCanvas"></canvas>
+    </div>
+
+    <!-- Chatbot Container -->
+    <div class="chatbot-container">
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <h2>
+                <i class="fas fa-map-marked-alt"></i> Local Guide AI
+                <span class="location-info" id="location-info">Detecting location...</span>
+            </h2>
+            <div class="header-controls">
+                <div class="status-indicator"></div>
+                <button class="header-button theme-toggle" id="theme-toggle" title="Toggle Theme">
+                    <i class="fas fa-moon"></i>
+                </button>
+                <button class="header-button" id="settings-toggle" title="Settings">
+                    <i class="fas fa-cog"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Iframe Container -->
+        <div class="iframe-container">
+            <div class="iframe-overlay"></div>
+            <!-- Loading Overlay -->
+            <div class="loading-overlay" id="loading-overlay">
+                <div class="loader"></div>
+                <div class="loading-text">Initializing Local Guide AI...</div>
+            </div>
+            <iframe
+                id="chatbot-iframe"
+                src="https://www.chatbase.co/chatbot-iframe/KpzDO0Ru7SHi8_6N-V08L"
+                width="100%"
+                height="100%"
+                frameborder="0"
+            ></iframe>
+        </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <h3>Command Center</h3>
+        <label>
+            <input type="checkbox" id="dark-mode-toggle"> Dark Mode
+        </label>
+        <label>
+            <input type="checkbox" id="notifications-toggle"> Push Notifications
+        </label>
+        <label>
+            <input type="checkbox" id="voice-mode-toggle"> Voice Interaction
+        </label>
+        <label>
+            Interface Scale:
+            <input type="range" id="scale-slider" min="0.8" max="1.2" step="0.1" value="1">
+        </label>
+        <button id="save-settings">Save Settings</button>
+    </div>
+
+    <!-- Holographic Toggle Button -->
+    <button id="chatbot-toggle" class="chatbot-toggle">
+        <i class="fas fa-comments"></i>
+    </button>
+
+    <script>
+        // Core Elements
+        const toggleButton = document.getElementById('chatbot-toggle');
+        const chatbotContainer = document.querySelector('.chatbot-container');
+        const iframe = document.getElementById('chatbot-iframe');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        const themeToggle = document.getElementById('theme-toggle');
+        const settingsToggle = document.getElementById('settings-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const notificationsToggle = document.getElementById('notifications-toggle');
+        const voiceModeToggle = document.getElementById('voice-mode-toggle');
+        const scaleSlider = document.getElementById('scale-slider');
+        const saveSettings = document.getElementById('save-settings');
+        const locationInfo = document.getElementById('location-info');
+
+        // Toggle chatbot visibility on mobile
+        toggleButton.addEventListener('click', () => {
+            chatbotContainer.classList.toggle('active');
+        });
+
+        // Focus iframe
+        chatbotContainer.addEventListener('click', () => {
+            iframe.focus();
+        });
+
+        // Theme Toggle
+        function updateTheme(isDark) {
+            document.body.classList.toggle('dark-mode', isDark);
+            themeToggle.querySelector('i').classList.toggle('fa-moon', !isDark);
+            themeToggle.querySelector('i').classList.toggle('fa-sun', isDark);
+            darkModeToggle.checked = isDark;
+            localStorage.setItem('darkMode', isDark);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            updateTheme(!document.body.classList.contains('dark-mode'));
+        });
+
+        darkModeToggle.addEventListener('change', () => {
+            updateTheme(darkModeToggle.checked);
+        });
+
+        // Initialize theme from localStorage
+        if (localStorage.getItem('darkMode') === 'true') {
+            updateTheme(true);
+        }
+
+        // Settings Toggles
+        notificationsToggle.addEventListener('change', () => {
+            console.log('Notifications:', notificationsToggle.checked ? 'Enabled' : 'Disabled');
+        });
+
+        voiceModeToggle.addEventListener('change', () => {
+            console.log('Voice Interaction:', voiceModeToggle.checked ? 'Enabled' : 'Disabled');
+        });
+
+        // Scale Slider (Fixed)
+        scaleSlider.addEventListener('input', () => {
+            chatbotContainer.style.transform = `scale(${scaleSlider.value})`;
+        });
+
+        // Save Settings
+        saveSettings.addEventListener('click', () => {
+            saveSettings.style.animation = 'saveGlow 0.7s';
+            setTimeout(() => {
+                saveSettings.style.animation = '';
+                alert('Settings saved successfully!');
+                console.log({
+                    darkMode: darkModeToggle.checked,
+                    notifications: notificationsToggle.checked,
+                    voiceMode: voiceModeToggle.checked,
+                    scale: scaleSlider.value
+                });
+            }, 700);
+        });
+
+        // Iframe Loading
+        iframe.addEventListener('load', () => {
+            loadingOverlay.classList.add('hidden');
+            iframe.classList.add('loaded');
+        });
+
+        // Close Sidebar on Outside Click (Fixed)
+        document.addEventListener('click', (e) => {
+            if (!sidebar.contains(e.target) && !settingsToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+            }
+        });
+
+        // Sidebar Toggle
+        settingsToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+
+        // Mock Geolocation (London, UK)
+        setTimeout(() => {
+            locationInfo.textContent = 'Location: Punjab, IN';
+            locationInfo.classList.add('visible');
+        }, 1000);
+
+        // Starfield Background
+        const canvas = document.getElementById('starfieldCanvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const stars = [];
+        const starCount = 200;
+
+        class Star {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.size = Math.random() * 2 + 1;
+                this.opacity = Math.random() * 0.5 + 0.3;
+                this.speed = Math.random() * 0.5 + 0.2;
+            }
+
+            update() {
+                this.y += this.speed;
+                if (this.y > canvas.height) {
+                    this.y = 0;
+                    this.x = Math.random() * canvas.width;
+                }
+            }
+
+            draw() {
+                ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initStars() {
+            for (let i = 0; i < starCount; i++) {
+                stars.push(new Star());
+            }
+        }
+
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            stars.forEach(star => {
+                star.update();
+                star.draw();
+            });
+            requestAnimationFrame(animateStars);
+        }
+
+        initStars();
+        animateStars();
+
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
